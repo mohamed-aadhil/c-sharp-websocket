@@ -2,18 +2,40 @@ using ForeignTimeWebSocket.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontendApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", //React origin 
+                           "http://localhost:4200"  //Angular origin
+        )
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 builder.Services.AddSingleton<TimeService>();
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+var webSocketOptions = new WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromSeconds(120),
+    AllowedOrigins = { "http://localhost:5173", // React origin
+                       "http://localhost:4200"  // Angular orign
+    }
+};
+
+// Apply middlewares
+app.UseWebSockets(webSocketOptions);
+
+
+app.UseCors("AllowFrontendApp");
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -23,8 +45,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
-
-app.UseWebSockets();
 
 app.MapControllers();
 
